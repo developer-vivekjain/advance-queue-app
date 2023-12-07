@@ -18,7 +18,7 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation group: 'com.oracle.database.messaging', name: 'aqapi', version: '23.2.0.0'
-	
+	implementation group: 'com.oracle.database.jdbc', name: 'ojdbc8', version: '23.3.0.23.09'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
