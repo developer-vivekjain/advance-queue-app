@@ -9,62 +9,85 @@ import javax.jms.MessageConsumer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import oracle.jms.AQjmsFactory;
+import oracle.jms.AQjmsSession;
+
 @Service
 public class AQConsumerService {
-	Logger logger = LoggerFactory.getLogger(AQConsumerService.class);	
-
-	@Value("${queue.broker.url}")
-	String brokerUrl;
+	Logger logger = LoggerFactory.getLogger(AQConsumerService.class);
 
 	@Value("${queue.name}")
 	String queueName;
 
+	@Value("${db.username}")
+	String userName;
+
+	@Value("${db.password}")
+	String password;
+
+	@Value("${db.url}")
+	String url;
+
+	@Value("${db.schema.name}")
+	String schemaName;
+
 	public void consumeMessage() {
 
 		Connection connection = null;
+		Session session = null;
+		MessageConsumer consumer = null;
+
 		try {
 			// Create a connection factory
-			ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(brokerUrl);
+			ConnectionFactory connectionFactory = AQjmsFactory.getConnectionFactory(url, null);
 
 			// Create a connection
-			connection = connectionFactory.createConnection();
+			connection = connectionFactory.createConnection(userName, password);
+			connection.start();
 
 			// Create a session
-			Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+			session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
 
-			// Create the destination (queue)
-			Destination destination = session.createQueue(queueName);
+			// Create a destination (queue)
+			Destination destination = ((AQjmsSession) session).getQueue(schemaName, queueName);
 
 			// Create a consumer
-			MessageConsumer consumer = session.createConsumer(destination);
-
-			// Start the connection
-			connection.start();
+			consumer = session.createConsumer(destination);
 
 			// Receive messages
 			while (true) {
-				Message message = consumer.receive();
+				Message message = consumer.receive(); // We can also specify a timeout
+
 				if (message instanceof TextMessage) {
 					TextMessage textMessage = (TextMessage) message;
-					logger.info("Received message: %s",  textMessage.getText());
+					String text = textMessage.getText();
+					logger.info("Received message: " + text);			
+
+					// Acknowledge the message
+					message.acknowledge();
 				}
 			}
 		} catch (JMSException e) {
 			e.printStackTrace();
 		} finally {
-			// Close the connection to release resources
-			if (connection != null) {
-				try {
-					connection.close();
-				} catch (JMSException e) {
-					e.printStackTrace();
+			// Close resources in reverse order
+			try {
+				if (consumer != null) {
+					consumer.close();
 				}
+				if (session != null) {
+					session.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
+			} catch (JMSException e) {
+				e.printStackTrace();
 			}
 		}
 	}

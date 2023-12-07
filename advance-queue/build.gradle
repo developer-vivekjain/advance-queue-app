@@ -17,8 +17,7 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.apache.activemq:activemq-broker:5.16.1'
-    implementation 'org.apache.activemq:activemq-client:5.16.1'
+	implementation group: 'com.oracle.database.messaging', name: 'aqapi', version: '23.2.0.0'
 	
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
